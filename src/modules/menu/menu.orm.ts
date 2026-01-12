@@ -1,7 +1,7 @@
 import { db } from "./../../db/db";
 import type { Restaurant } from "../restaurant/restaurant.type";
 import type { Menu } from "./menu.types";
-import { NotFoundError, BadRequest } from "../../errors";
+import { ERRORS } from "../../errors";
 import { getRestaurant } from "../../db/helper";
 export const menuOrm = {
   async fetchMenu(restaurant_id: number): Promise<Menu> {
@@ -10,7 +10,7 @@ export const menuOrm = {
     const menu = restaurant.menu;
     menu.items = menu.items.filter((item) => !item.out_of_stock);
     if (!menu) {
-      throw new NotFoundError("No menu for this restaurant");
+      throw ERRORS.MENU_NOT_FOUND
     }
     return menu;
   },
@@ -24,7 +24,7 @@ export const menuOrm = {
 
     const menu = restaurant.menu;
     if (!menu) {
-      throw new NotFoundError("No menu for this restaurant");
+      throw ERRORS.MENU_NOT_FOUND
     }
 
     let ingredientUsed = false;
@@ -42,9 +42,7 @@ export const menuOrm = {
     }
 
     if (!ingredientUsed) {
-      throw new NotFoundError(
-        `Ingredient '${ingredient}' not used in any menu item`
-      );
+      throw  ERRORS.INGREDIENT_NOT_FOUND
     }
 
     return menu;
@@ -57,7 +55,7 @@ export const menuOrm = {
 
     const menu = restaurant.menu;
     if (!menu) {
-      throw new NotFoundError("No menu for this restaurant");
+      throw ERRORS.MENU_NOT_FOUND
     }
     let ingredientFound = false;
     for (const item of menu.items) {
@@ -73,9 +71,7 @@ export const menuOrm = {
       }
     }
     if (!ingredientFound) {
-      throw new NotFoundError(
-        `Ingredient '${ingredient}' is not marked out of stock`
-      );
+      throw ERRORS.INGREDIENT_NOT_FOUND
     }
 
     return menu;
@@ -86,7 +82,7 @@ export const menuOrm = {
 
     const menu = restaurant.menu;
     if (!menu) {
-      throw new NotFoundError("No menu for this restaurant");
+      throw ERRORS.MENU_NOT_FOUND
     }
     menu.items.filter(items => items.name != item_name);
     return menu;

@@ -1,20 +1,10 @@
-// errors/index.ts
+// errors/errors.ts
 import { AppError } from "./AppError";
 
-export class ValidationError extends AppError {
-  constructor(message = "Validation failed") {
-    super(message, "VALIDATION_ERROR", 400);
-  }
-}
-
-export class NotFoundError extends AppError {
-  constructor(message = "Not found") {
-    super(message, "NOT_FOUND", 404);
-  }
-}
-
-export class BadRequest extends AppError{
-  constructor(message = "Bad Reuqest"){
-    super(message,"BAD_REQUEST",400)
-  }
-}
+export const ERRORS = {
+  INVALID_EMAIL: new AppError("INVALID_EMAIL"),
+  RESTAURANT_NOT_FOUND: new AppError("RESTAURANT_NOT_FOUND"),
+  UNAUTHORIZED: new AppError("UNAUTHORIZED"),
+  MENU_NOT_FOUND: new AppError("MENU_NOT_FOUND"),
+  INGREDIENT_NOT_FOUND: new AppError("INGREDIENT_NOT_FOUND")
+} as const;
