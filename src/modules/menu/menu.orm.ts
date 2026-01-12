@@ -137,4 +137,36 @@ export const menuOrm = {
 
     return menu;
   },
+
+  async removeMenuItem(
+    restaurant_id: number,
+    item_name: string
+  ): Promise<Menu> {
+    if (restaurant_id == null) {
+      throw new BadRequest("invalid restaurant_id");
+    }
+    if (!item_name) {
+      throw new BadRequest("Invalid menu item name");
+    }
+
+    const restaurant = db.find((restaurant) => restaurant.id == restaurant_id);
+
+    if (!restaurant) {
+      throw new NotFoundError("No restaurant found");
+    }
+
+    const menu: Menu = restaurant.menu;
+    if (!menu) {
+      throw new NotFoundError("No menu for this restaurant");
+    }
+    const initialLength = menu.items.length;
+
+    menu.items = menu.items.filter((item) => item.name !== item_name);
+
+    if (menu.items.length === initialLength) {
+      throw new NotFoundError("Menu item not found");
+    }
+
+    return menu;
+  },
 };
