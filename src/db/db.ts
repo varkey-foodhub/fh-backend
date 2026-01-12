@@ -1,5 +1,5 @@
 import type { Restaurant } from "../modules/restaurant/restaurant.type";
-import type { Device, Price } from "../modules/menu/menu.types";
+import { Device } from "../modules/menu/menu.types";
 
 export const db: Restaurant[] = [
   {
@@ -11,9 +11,9 @@ export const db: Restaurant[] = [
         {
           name: "Butter Chicken",
           price: [
-            { device: "kiosk", price: 300 },
-            { device: "mobile", price: 320 },
-            { device: "dinein", price: 350 }
+            { device: Device.KIOSK, price: 300 },
+            { device: Device.MOBILE, price: 320 },
+            { device: Device.DINEIN, price: 350 }
           ],
           ingredients: ["chicken", "butter", "tomato", "cream", "garam masala"],
           out_of_stock: false,
@@ -22,9 +22,9 @@ export const db: Restaurant[] = [
         {
           name: "Paneer Tikka",
           price: [
-            { device: "kiosk", price: 240 },
-            { device: "mobile", price: 260 },
-            { device: "dinein", price: 280 }
+            { device: Device.KIOSK, price: 240 },
+            { device: Device.MOBILE, price: 260 },
+            { device: Device.DINEIN, price: 280 }
           ],
           ingredients: ["paneer", "yogurt", "chili", "capsicum", "onion"],
           out_of_stock: false,
@@ -33,9 +33,9 @@ export const db: Restaurant[] = [
         {
           name: "Dal Tadka",
           price: [
-            { device: "kiosk", price: 160 },
-            { device: "mobile", price: 180 },
-            { device: "dinein", price: 200 }
+            { device: Device.KIOSK, price: 160 },
+            { device: Device.MOBILE, price: 180 },
+            { device: Device.DINEIN, price: 200 }
           ],
           ingredients: ["lentils", "ghee", "garlic", "cumin"],
           out_of_stock: false,
@@ -44,9 +44,9 @@ export const db: Restaurant[] = [
         {
           name: "Garlic Naan",
           price: [
-            { device: "kiosk", price: 50 },
-            { device: "mobile", price: 60 },
-            { device: "dinein", price: 70 }
+            { device: Device.KIOSK, price: 50 },
+            { device: Device.MOBILE, price: 60 },
+            { device: Device.DINEIN, price: 70 }
           ],
           ingredients: ["flour", "garlic", "butter"],
           out_of_stock: false,
@@ -55,9 +55,9 @@ export const db: Restaurant[] = [
         {
           name: "Chicken Biryani",
           price: [
-            { device: "kiosk", price: 280 },
-            { device: "mobile", price: 300 },
-            { device: "dinein", price: 330 }
+            { device: Device.KIOSK, price: 280 },
+            { device: Device.MOBILE, price: 300 },
+            { device: Device.DINEIN, price: 330 }
           ],
           ingredients: ["chicken", "rice", "saffron", "onion", "spices"],
           out_of_stock: false,
@@ -75,9 +75,9 @@ export const db: Restaurant[] = [
         {
           name: "Classic Beef Burger",
           price: [
-            { device: "kiosk", price: 220 },
-            { device: "mobile", price: 240 },
-            { device: "dinein", price: 270 }
+            { device: Device.KIOSK, price: 220 },
+            { device: Device.MOBILE, price: 240 },
+            { device: Device.DINEIN, price: 270 }
           ],
           ingredients: ["beef", "bun", "lettuce", "cheese", "tomato"],
           out_of_stock: false,
@@ -86,9 +86,9 @@ export const db: Restaurant[] = [
         {
           name: "Grilled Chicken Sandwich",
           price: [
-            { device: "kiosk", price: 200 },
-            { device: "mobile", price: 220 },
-            { device: "dinein", price: 250 }
+            { device: Device.KIOSK, price: 200 },
+            { device: Device.MOBILE, price: 220 },
+            { device: Device.DINEIN, price: 250 }
           ],
           ingredients: ["chicken", "bun", "lettuce", "mayonnaise"],
           out_of_stock: false,
@@ -97,9 +97,9 @@ export const db: Restaurant[] = [
         {
           name: "French Fries",
           price: [
-            { device: "kiosk", price: 100 },
-            { device: "mobile", price: 120 },
-            { device: "dinein", price: 140 }
+            { device: Device.KIOSK, price: 100 },
+            { device: Device.MOBILE, price: 120 },
+            { device: Device.DINEIN, price: 140 }
           ],
           ingredients: ["potato", "salt", "oil"],
           out_of_stock: false,
@@ -108,9 +108,9 @@ export const db: Restaurant[] = [
         {
           name: "Cheese Loaded Fries",
           price: [
-            { device: "kiosk", price: 140 },
-            { device: "mobile", price: 160 },
-            { device: "dinein", price: 180 }
+            { device: Device.KIOSK, price: 140 },
+            { device: Device.MOBILE, price: 160 },
+            { device: Device.DINEIN, price: 180 }
           ],
           ingredients: ["potato", "cheese", "salt", "oil"],
           out_of_stock: false,
@@ -119,9 +119,9 @@ export const db: Restaurant[] = [
         {
           name: "Chicken Wings",
           price: [
-            { device: "kiosk", price: 260 },
-            { device: "mobile", price: 280 },
-            { device: "dinein", price: 310 }
+            { device: Device.KIOSK, price: 260 },
+            { device: Device.MOBILE, price: 280 },
+            { device: Device.DINEIN, price: 310 }
           ],
           ingredients: ["chicken", "chili", "butter", "garlic"],
           out_of_stock: false,
@@ -139,9 +139,9 @@ export const db: Restaurant[] = [
         {
           name: "Quinoa Veg Bowl",
           price: [
-            { device: "kiosk", price: 190 },
-            { device: "mobile", price: 210 },
-            { device: "dinein", price: 230 }
+            { device: Device.KIOSK, price: 190 },
+            { device: Device.MOBILE, price: 210 },
+            { device: Device.DINEIN, price: 230 }
           ],
           ingredients: ["quinoa", "broccoli", "carrot", "beans"],
           out_of_stock: false,
@@ -150,9 +150,9 @@ export const db: Restaurant[] = [
         {
           name: "Avocado Toast",
           price: [
-            { device: "kiosk", price: 170 },
-            { device: "mobile", price: 190 },
-            { device: "dinein", price: 210 }
+            { device: Device.KIOSK, price: 170 },
+            { device: Device.MOBILE, price: 190 },
+            { device: Device.DINEIN, price: 210 }
           ],
           ingredients: ["bread", "avocado", "olive oil", "salt"],
           out_of_stock: false,
@@ -161,9 +161,9 @@ export const db: Restaurant[] = [
         {
           name: "Vegan Burrito",
           price: [
-            { device: "kiosk", price: 210 },
-            { device: "mobile", price: 230 },
-            { device: "dinein", price: 250 }
+            { device: Device.KIOSK, price: 210 },
+            { device: Device.MOBILE, price: 230 },
+            { device: Device.DINEIN, price: 250 }
           ],
           ingredients: ["tortilla", "beans", "rice", "avocado"],
           out_of_stock: false,
@@ -172,9 +172,9 @@ export const db: Restaurant[] = [
         {
           name: "Fruit Smoothie",
           price: [
-            { device: "kiosk", price: 130 },
-            { device: "mobile", price: 150 },
-            { device: "dinein", price: 170 }
+            { device: Device.KIOSK, price: 130 },
+            { device: Device.MOBILE, price: 150 },
+            { device: Device.DINEIN, price: 170 }
           ],
           ingredients: ["banana", "strawberry", "almond milk"],
           out_of_stock: false,
@@ -183,9 +183,9 @@ export const db: Restaurant[] = [
         {
           name: "Grilled Paneer Salad",
           price: [
-            { device: "kiosk", price: 180 },
-            { device: "mobile", price: 200 },
-            { device: "dinein", price: 220 }
+            { device: Device.KIOSK, price: 180 },
+            { device: Device.MOBILE, price: 200 },
+            { device: Device.DINEIN, price: 220 }
           ],
           ingredients: ["paneer", "lettuce", "tomato", "olive oil"],
           out_of_stock: false,
