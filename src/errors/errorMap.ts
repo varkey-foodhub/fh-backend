@@ -17,6 +17,10 @@ export const ERROR_MAP = {
     statusCode: 404,
     message: "Ingredient not found",
   },
+  MENU_ITEM_NOT_FOUND: {
+    statusCode: 404,
+    message: "Menu Item not found",
+  },
 
   UNAUTHORIZED: {
     statusCode: 401,

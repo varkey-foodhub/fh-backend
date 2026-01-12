@@ -1,12 +1,23 @@
-import type { Restaurant } from "../modules/restaurant/restaurant.type";
-import { db } from "./db";
+import db from "./db";
 import { ERRORS } from "../errors";
-export async function getRestaurant(restaurant_id):Promise<Restaurant>{
-    const restaurant: Restaurant | undefined = db.find(
-        (restaurant) => restaurant.id === restaurant_id
-      );
-      if (!restaurant) {
-        throw  ERRORS.RESTAURANT_NOT_FOUND
-      }
-      return restaurant
+
+export function getActiveMenuId(restaurant_id: number): number {
+  const menu = db
+    .prepare(
+      `
+      SELECT id
+      FROM menus
+      WHERE restaurant_id = ?
+        AND is_active = 1
+      ORDER BY version DESC
+      LIMIT 1
+      `
+    )
+    .get(restaurant_id) as { id: number } | undefined;
+
+  if (!menu) {
+    throw ERRORS.MENU_NOT_FOUND;
+  }
+
+  return menu.id;
 }
