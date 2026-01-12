@@ -169,4 +169,43 @@ export const menuOrm = {
 
     return menu;
   },
+
+  async markIngredientBackInStock(restaurant_id: number, ingredient: string):Promise<Menu> {
+    if (restaurant_id == null) {
+      throw new BadRequest("No restaurant_id provided");
+    }
+    if (!ingredient) {
+      throw new BadRequest("No ingredient provided");
+    }
+
+    const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
+    if (!restaurant) {
+      throw new NotFoundError("No restaurant found");
+    }
+
+    const menu = restaurant.menu;
+    if (!menu) {
+      throw new NotFoundError("No menu for this restaurant");
+    }
+    let ingredientFound = false;
+    for (const item of menu.items) {
+      const index = item.out_of_stock_items.indexOf(ingredient);
+      if (index != -1) {
+        ingredientFound = true;
+
+        item.out_of_stock_items.splice(index, 1);
+
+        if (item.out_of_stock_items.length === 0) {
+          item.out_of_stock = false;
+        }
+      }
+    }
+    if (!ingredientFound) {
+      throw new NotFoundError(
+        `Ingredient '${ingredient}' is not marked out of stock`
+      );
+    }
+
+    return menu;
+  },
 };

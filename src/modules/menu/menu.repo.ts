@@ -8,6 +8,9 @@ export const menuRepo = {
     async markIngredientOutOfStock(restaurant_id:number, ingredient:string):Promise<Menu> {
         return menuOrm.markIngredientOutOfStock(restaurant_id,ingredient);
     },
+    async markIngreidientBackInStock(restaurant_id:number, ingredient:string):Promise<Menu> {
+        return menuOrm.markIngredientBackInStock(restaurant_id,ingredient);
+    },
     async removeItem(restaurant_id:number,item_name:string):Promise<Menu>{
         return menuOrm.removeMenuItem(restaurant_id,item_name);
     },
