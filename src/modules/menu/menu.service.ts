@@ -1,4 +1,5 @@
 import { menuRepo } from "./menu.repo";
+import { removeItemParamsSchema } from "./menu.schema";
 import type { Menu } from "./menu.types";
 export const MenuService = {
     async getRestaurantMenu(restaurant_id:number): Promise<Menu>{
@@ -7,6 +8,10 @@ export const MenuService = {
     },
     async markIngredientOutOfStock(restaurant_id:number, ingredient:string):Promise<Menu>{
         const menu: Promise<Menu> = menuRepo.markIngredientOutOfStock(restaurant_id,ingredient)
+        return menu;
+    },
+    async removeItem(restaurant_id:number, item_name:string):Promise<Menu>{
+        const menu:Promise<Menu> = menuRepo.removeItem(restaurant_id,item_name);
         return menu;
     }
 }
