@@ -5,9 +5,6 @@ import { NotFoundError, BadRequest } from "../../errors";
 
 export const menuOrm = {
   async fetchMenu(restaurant_id: number): Promise<Menu> {
-    if (restaurant_id == null) {
-      throw new BadRequest("No restaurant_id provided");
-    }
 
     const restaurant: Restaurant | undefined = db.find(
       (restaurant) => restaurant.id === restaurant_id
@@ -27,12 +24,6 @@ export const menuOrm = {
     restaurant_id: number,
     ingredient: string
   ): Promise<Menu> {
-    if (restaurant_id == null) {
-      throw new BadRequest("No restaurant_id provided");
-    }
-    if (!ingredient) {
-      throw new BadRequest("No ingredient provided");
-    }
 
     const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
     if (!restaurant) {
@@ -68,12 +59,7 @@ export const menuOrm = {
   },
 
   async markIngredientBackInStock(restaurant_id: number, ingredient: string):Promise<Menu> {
-    if (restaurant_id == null) {
-      throw new BadRequest("No restaurant_id provided");
-    }
-    if (!ingredient) {
-      throw new BadRequest("No ingredient provided");
-    }
+    
 
     const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
     if (!restaurant) {
@@ -106,12 +92,6 @@ export const menuOrm = {
     return menu;
   },
   async removeItem(restaurant_id:number,item_name:string):Promise<Menu>{
-    if (restaurant_id == null) {
-      throw new BadRequest("No restaurant_id provided");
-    }
-    if (!item_name) {
-      throw new BadRequest("No ingredient provided");
-    }
 
     const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
     if (!restaurant) {
