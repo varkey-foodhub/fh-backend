@@ -35,5 +35,11 @@ menuRouter.post('/add/ingredient/:restaurant_id/:ingredient',
     MenuController.markIngredientBackInStock
 )
 
+menuRouter.post('/add/ingredient/:restaurant_id/:ingredient',
+    validate({
+        params:markIngredientBackInStockSchema
+    }),
+    MenuController.markIngredientBackInStock
+)
 
-export default menuRouter;
+export default menuRouter

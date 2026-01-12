@@ -24,17 +24,6 @@ export const MenuController = {
             next(e)
         }
     },
-    async removeItem(req:Request, res:Response, next:NextFunction){
-        try{
-            const data = await MenuService.removeItem(req.params.restaurant_id,req.params.item_name)
-            res.json({
-                status:200,
-                mesage:data
-            })
-        }catch(e){
-            next(e)
-        }
-    },
     async markIngredientBackInStock(req:Request,res:Response,next:NextFunction){
         try{
             const data = await MenuService.markIngredientBackInStock(req.params.restaurant_id,req.params.ingredient)
