@@ -1,90 +1,164 @@
-import { db } from "./../../db/db";
-import type { Restaurant } from "../restaurant/restaurant.type";
-import type { Menu } from "./menu.types";
+import db from "../../db/db";
+import { Menu } from "./menu.types";
 import { ERRORS } from "../../errors";
-import { getRestaurant } from "../../db/helper";
+import { getActiveMenuId } from "../../db/helper";
+
+/**
+ * Fetch active menu for a restaurant (all active items)
+ */
 export const menuOrm = {
-  async fetchMenu(restaurant_id: number): Promise<Menu> {
+  fetchMenu(restaurant_id: number): Menu {
+    // get active menu (latest version)
+    const menuId = getActiveMenuId(restaurant_id);
+    const items = db
+      .prepare(
+        `
+        SELECT
+          mim.id,
+          mim.name
+        FROM menu_items mi
+        JOIN menu_items_master mim
+          ON mim.id = mi.menu_item_id
+        WHERE mi.menu_id = ?
+          AND mi.is_active = 1
+          AND mim.id NOT IN (
+            SELECT menu_item_id
+            FROM menu_item_oos
+          )
+        `
+      )
+      .all(menuId);
 
-    const restaurant: Restaurant = await getRestaurant(restaurant_id)
-    const menu = restaurant.menu;
-    menu.items = menu.items.filter((item) => !item.out_of_stock);
-    if (!menu) {
-      throw ERRORS.MENU_NOT_FOUND
-    }
-    return menu;
+    return {
+      id: menuId,
+      items,
+    } as Menu;
   },
 
-  async markIngredientOutOfStock(
-    restaurant_id: number,
-    ingredient: string
-  ): Promise<Menu> {
+  /**
+   * Mark ingredient out of stock
+   * → all menu items using this ingredient become unavailable (per device if needed later)
+   */
+  markIngredientOutOfStock(restaurant_id: number, ingredient: string): Menu {
+    const ingredientRow = db
+      .prepare(
+        `
+        SELECT id
+        FROM ingredients
+        WHERE name = ?
+        `
+      )
+      .get(ingredient) as { id: number } | undefined;
 
-    const restaurant: Restaurant = await getRestaurant(restaurant_id)
-
-    const menu = restaurant.menu;
-    if (!menu) {
-      throw ERRORS.MENU_NOT_FOUND
+    if (!ingredientRow) {
+      throw ERRORS.INGREDIENT_NOT_FOUND;
     }
 
-    let ingredientUsed = false;
+    const menuId = getActiveMenuId(restaurant_id);
 
-    for (const item of menu.items) {
-      if (item.ingredients.includes(ingredient)) {
-        ingredientUsed = true;
+    const affectedItems = db
+      .prepare(
+        `
+        SELECT DISTINCT mi.menu_item_id
+        FROM menu_items mi
+        JOIN menu_item_ingredients mii
+          ON mii.menu_item_id = mi.menu_item_id
+        WHERE mi.menu_id = ?
+          AND mii.ingredient_id = ?
+        `
+      )
+      .all(menuId, ingredientRow.id) as { menu_item_id: number }[];
 
-        item.out_of_stock = true;
+    if (affectedItems.length === 0) {
+      throw ERRORS.INGREDIENT_NOT_FOUND;
+    }
 
-        if (!item.out_of_stock_items.includes(ingredient)) {
-          item.out_of_stock_items.push(ingredient);
-        }
+    const insertOOS = db.prepare(
+      `
+      INSERT OR IGNORE INTO menu_item_oos (menu_item_id, device)
+      VALUES (?, 'ALL')
+      `
+    );
+
+    const txn = db.transaction(() => {
+      for (const item of affectedItems) {
+        insertOOS.run(item.menu_item_id);
       }
-    }
+    });
 
-    if (!ingredientUsed) {
-      throw  ERRORS.INGREDIENT_NOT_FOUND
-    }
+    txn();
 
-    return menu;
+    return this.fetchMenu(restaurant_id);
   },
 
-  async markIngredientBackInStock(restaurant_id: number, ingredient: string):Promise<Menu> {
-    
+  /**
+   * Mark ingredient back in stock
+   */
+  markIngredientBackInStock(restaurant_id: number, ingredient: string): Menu {
+    const ingredientRow = db
+      .prepare(
+        `
+        SELECT id
+        FROM ingredients
+        WHERE name = ?
+        `
+      )
+      .get(ingredient) as { id: number } | undefined;
 
-    const restaurant: Restaurant = await getRestaurant(restaurant_id)
-
-    const menu = restaurant.menu;
-    if (!menu) {
-      throw ERRORS.MENU_NOT_FOUND
-    }
-    let ingredientFound = false;
-    for (const item of menu.items) {
-      const index = item.out_of_stock_items.indexOf(ingredient);
-      if (index != -1) {
-        ingredientFound = true;
-
-        item.out_of_stock_items.splice(index, 1);
-
-        if (item.out_of_stock_items.length === 0) {
-          item.out_of_stock = false;
-        }
-      }
-    }
-    if (!ingredientFound) {
-      throw ERRORS.INGREDIENT_NOT_FOUND
+    if (!ingredientRow) {
+      throw ERRORS.INGREDIENT_NOT_FOUND;
     }
 
-    return menu;
+    const menuId = getActiveMenuId(restaurant_id);
+
+    const result = db
+      .prepare(
+        `
+        DELETE FROM menu_item_oos
+        WHERE menu_item_id IN (
+          SELECT mi.menu_item_id
+          FROM menu_items mi
+          JOIN menu_item_ingredients mii
+            ON mii.menu_item_id = mi.menu_item_id
+          WHERE mi.menu_id = ?
+            AND mii.ingredient_id = ?
+        )
+        `
+      )
+      .run(menuId, ingredientRow.id);
+
+    if (result.changes === 0) {
+      throw ERRORS.INGREDIENT_NOT_FOUND;
+    }
+
+    return this.fetchMenu(restaurant_id);
   },
-  async removeItem(restaurant_id:number,item_name:string):Promise<Menu>{
 
-    const restaurant: Restaurant = await getRestaurant(restaurant_id)
+  /**
+   * Remove item from menu (soft delete)
+   */
+  removeItem(restaurant_id: number, item_name: string): Menu {
+    const menuId = getActiveMenuId(restaurant_id);
 
-    const menu = restaurant.menu;
-    if (!menu) {
-      throw ERRORS.MENU_NOT_FOUND
+    const result = db
+      .prepare(
+        `
+        UPDATE menu_items
+        SET is_active = 0
+        WHERE menu_id = ?
+          AND menu_item_id = (
+            SELECT id
+            FROM menu_items_master
+            WHERE name = ?
+          )
+        `
+      )
+      .run(menuId, item_name);
+
+    if (result.changes === 0) {
+      throw ERRORS.MENU_ITEM_NOT_FOUND;
     }
-    menu.items.filter(items => items.name != item_name);
-    return menu;
-  }
+
+    return this.fetchMenu(restaurant_id);
+  },
 };
