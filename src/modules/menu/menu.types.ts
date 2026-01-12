@@ -14,4 +14,8 @@ export type Price = {
   price: number;
 };
 
-export type Device = "kiosk" | "mobile" | "dinein";
+export enum Device{
+  KIOSK="kiosk",
+  MOBILE="mobile",
+  DINEIN="dinein"
+}
