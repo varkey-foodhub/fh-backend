@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^17.2.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/node": "^25.0.6",
