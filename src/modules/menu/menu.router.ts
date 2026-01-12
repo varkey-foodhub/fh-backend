@@ -12,11 +12,6 @@ menuRouter.get(
   validate({ params: menuParamsSchema }),
   MenuController.getRestaurantMenu
 );
-menuRouter.get(
-  "/:restaurant_id",
-  validate({ params: menuParamsSchema }),
-  MenuController.getRestaurantMenu
-);
 
 menuRouter.post(
   "/remove/ingredient/:restaurant_id/:ingredient",
@@ -39,20 +34,6 @@ menuRouter.post('/add/ingredient/:restaurant_id/:ingredient',
     }),
     MenuController.markIngredientBackInStock
 )
-menuRouter.post(
-  "/remove/ingredient/:restaurant_id/:ingredient",
-  validate({
-    params: markIngredientOutOfStockSchema,
-  }),
-  MenuController.markIngredientOutOfStock
-);
 
-menuRouter.post(
-  "/remove/item/:restaurant_id/:item_name",
-  validate({
-    params: removeItemParamsSchema,
-  }),
-  MenuController.removeItem
-);
 
 export default menuRouter;
