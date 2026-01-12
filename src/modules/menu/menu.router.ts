@@ -6,7 +6,7 @@ import { menuParamsSchema} from './menu.schema'
 
 const menuRouter = new Router()
 
-menuRouter.get('/:id',
+menuRouter.get('/:restaurant_id',
     validate({params:menuParamsSchema}),
     MenuController.getRestaurantMenu
 )

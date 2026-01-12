@@ -1,8 +1,16 @@
 import { z } from "zod";
 
 export const menuParamsSchema = z.object({
-  id: z.coerce.number({
+  restaurant_id: z.coerce.number({
     error:"Invalid restaurant_id"
   })
 });
 
+export const markIngredientOutOfStockSchema = z.object({
+  restaurant_id: z.coerce.number({
+    error:"Invalid restaurant_id"
+  }),
+  ingredient: z.coerce.number({
+    error:"Invalid restaurant_id"
+  })
+})
