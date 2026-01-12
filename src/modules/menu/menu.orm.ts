@@ -10,25 +10,51 @@ export const menuOrm = {
   fetchMenu(restaurant_id: number): Menu {
     // get active menu (latest version)
     const menuId = getActiveMenuId(restaurant_id);
-    const items = db
+    const rows = db
       .prepare(
         `
         SELECT
-          mim.id,
-          mim.name
-        FROM menu_items mi
-        JOIN menu_items_master mim
-          ON mim.id = mi.menu_item_id
-        WHERE mi.menu_id = ?
-          AND mi.is_active = 1
-          AND mim.id NOT IN (
-            SELECT menu_item_id
-            FROM menu_item_oos
-          )
+  mim.id AS item_id,
+  mim.name AS item_name,
+
+  json_group_array(
+    json_object(
+      'device', mip.device,
+      'price', mip.price
+    )
+  ) AS prices,
+
+  (
+    SELECT json_group_array(i.name)
+    FROM menu_item_ingredients mii
+    JOIN ingredients i ON i.id = mii.ingredient_id
+    WHERE mii.menu_item_id = mim.id
+  ) AS ingredients
+
+FROM menu_items mi
+JOIN menu_items_master mim
+  ON mim.id = mi.menu_item_id
+JOIN menu_item_prices mip
+  ON mip.menu_item_id = mim.id
+
+WHERE mi.menu_id = ?
+  AND mi.is_active = 1
+  AND mim.id NOT IN (
+    SELECT menu_item_id
+    FROM menu_item_oos
+  )
+
+GROUP BY mim.id, mim.name;
+
         `
       )
       .all(menuId);
-
+      const items = rows.map(row => ({
+        id: row.item_id,
+        name: row.item_name,
+        prices: JSON.parse(row.prices),
+        ingredients: JSON.parse(row.ingredients),
+      }));
     return {
       id: menuId,
       items,
