@@ -16,6 +16,7 @@ export const menuOrm = {
       throw new NotFoundError("No restaurant found");
     }
     const menu = restaurant.menu;
+    menu.items = menu.items.filter(item => !item.out_of_stock)
     if (!menu) {
       throw new NotFoundError("No menu for this restaurant");
     }
