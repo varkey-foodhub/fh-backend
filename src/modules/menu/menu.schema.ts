@@ -14,3 +14,12 @@ export const markIngredientOutOfStockSchema = z.object({
     error:"Invalid restaurant_id"
   })
 })
+
+export const removeItemParamsSchema = z.object({
+  restaurant_id: z.coerce.number({
+    error:"Invalid restaurant_id"
+  }),
+  item_name: z.string({
+    error:"Invalid restaurant_id"
+  })
+})
