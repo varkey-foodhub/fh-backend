@@ -105,4 +105,24 @@ export const menuOrm = {
 
     return menu;
   },
+  async removeItem(restaurant_id:number,item_name:string):Promise<Menu>{
+    if (restaurant_id == null) {
+      throw new BadRequest("No restaurant_id provided");
+    }
+    if (!item_name) {
+      throw new BadRequest("No ingredient provided");
+    }
+
+    const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
+    if (!restaurant) {
+      throw new NotFoundError("No restaurant found");
+    }
+
+    const menu = restaurant.menu;
+    if (!menu) {
+      throw new NotFoundError("No menu for this restaurant");
+    }
+    menu.items.filter(items => items.name != item_name);
+    return menu;
+  }
 };

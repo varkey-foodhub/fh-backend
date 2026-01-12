@@ -13,5 +13,9 @@ export const MenuService = {
     async markIngredientBackInStock(restaurant_id:number, ingredient:string):Promise<Menu>{
         const menu: Promise<Menu> = menuRepo.markIngreidientBackInStock(restaurant_id,ingredient)
         return menu;
+    },
+    async removeItem(restaurant_id : number, item_name:string):Promise<Menu>{
+        const menu: Promise<Menu> = menuRepo.removeItem(restaurant_id,item_name)
+        return menu;
     }
 }

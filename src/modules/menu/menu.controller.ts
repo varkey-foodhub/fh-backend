@@ -34,5 +34,16 @@ export const MenuController = {
         }catch(e){
             next(e)
         }
+    },
+    async removeItem(req:Request,res:Response,next:NextFunction){
+        try{
+            const data = await MenuService.removeItem(req.params.restaurant_id,req.params.item_name)
+            res.json({
+                status:200,
+                message:data
+            })
+        }catch(e){
+            next(e)
+        }
     }
 }
