@@ -1,10 +1,17 @@
 export type MenuItem = {
-    name:string,
-    price:number,
-    ingredients:string[]
-}
+  name: string;
+  price: Price[];
+  ingredients: string[];
+  out_of_stock: boolean;
+  out_of_stock_items: string[];
+};
 
 export type Menu = {
-    items: MenuItem[];
-}
+  items: MenuItem[];
+};
+export type Price = {
+  device: Device;
+  price: number;
+};
 
+export type Device = "kiosk" | "mobile" | "dinein";

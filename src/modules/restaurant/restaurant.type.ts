@@ -3,4 +3,5 @@ export type Restaurant = {
     name:string,
     description:string,
     menu: Menu;
+    id:number;
 }

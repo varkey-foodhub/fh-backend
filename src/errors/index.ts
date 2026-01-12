@@ -12,3 +12,9 @@ export class NotFoundError extends AppError {
     super(message, "NOT_FOUND", 404);
   }
 }
+
+export class BadRequest extends AppError{
+  constructor(message = "Bad Reuqest"){
+    super(message,"BAD_REQUEST",400)
+  }
+}
