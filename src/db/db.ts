@@ -4,6 +4,7 @@ export const db: Restaurant[] = [
   {
     name: "Spice Route",
     description: "Modern Indian cuisine with bold spices",
+    id:1,
     menu: {
       items: [
         {
@@ -37,6 +38,7 @@ export const db: Restaurant[] = [
   {
     name: "Urban Grill",
     description: "Fast food and grilled classics",
+    id:2,
     menu: {
       items: [
         {
@@ -70,6 +72,7 @@ export const db: Restaurant[] = [
   {
     name: "Green Bowl",
     description: "Healthy bowls and vegan-friendly meals",
+    id:3,
     menu: {
       items: [
         {
