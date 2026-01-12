@@ -1,7 +1,7 @@
 import {Router} from 'express'
 import { MenuController } from './menu.controller'
 import { validate } from '../../middlewares/zod.middleware'
-import { menuParamsSchema, markIngredientOutOfStockSchema} from './menu.schema'
+import { menuParamsSchema, markIngredientOutOfStockSchema, markIngredientBackInStockSchema} from './menu.schema'
 
 
 const menuRouter = new Router()
@@ -16,6 +16,13 @@ menuRouter.post('/remove/ingredient/:restaurant_id/:ingredient',
         params:markIngredientOutOfStockSchema
     }),
     MenuController.markIngredientOutOfStock
+)
+
+menuRouter.post('/add/ingredient/:restaurant_id/:ingredient',
+    validate({
+        params:markIngredientBackInStockSchema
+    }),
+    MenuController.markIngredientBackInStock
 )
 
 export default menuRouter
