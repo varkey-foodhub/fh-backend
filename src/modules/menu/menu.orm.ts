@@ -2,16 +2,11 @@ import { db } from "./../../db/db";
 import type { Restaurant } from "../restaurant/restaurant.type";
 import type { Menu } from "./menu.types";
 import { NotFoundError, BadRequest } from "../../errors";
-
+import { getRestaurant } from "../../db/helper";
 export const menuOrm = {
   async fetchMenu(restaurant_id: number): Promise<Menu> {
 
-    const restaurant: Restaurant | undefined = db.find(
-      (restaurant) => restaurant.id === restaurant_id
-    );
-    if (!restaurant) {
-      throw new NotFoundError("No restaurant found");
-    }
+    const restaurant: Restaurant = await getRestaurant(restaurant_id)
     const menu = restaurant.menu;
     menu.items = menu.items.filter((item) => !item.out_of_stock);
     if (!menu) {
@@ -25,10 +20,7 @@ export const menuOrm = {
     ingredient: string
   ): Promise<Menu> {
 
-    const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
-    if (!restaurant) {
-      throw new NotFoundError("No restaurant found");
-    }
+    const restaurant: Restaurant = await getRestaurant(restaurant_id)
 
     const menu = restaurant.menu;
     if (!menu) {
@@ -61,10 +53,7 @@ export const menuOrm = {
   async markIngredientBackInStock(restaurant_id: number, ingredient: string):Promise<Menu> {
     
 
-    const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
-    if (!restaurant) {
-      throw new NotFoundError("No restaurant found");
-    }
+    const restaurant: Restaurant = await getRestaurant(restaurant_id)
 
     const menu = restaurant.menu;
     if (!menu) {
@@ -93,10 +82,7 @@ export const menuOrm = {
   },
   async removeItem(restaurant_id:number,item_name:string):Promise<Menu>{
 
-    const restaurant = db.find((restaurant) => restaurant.id === restaurant_id);
-    if (!restaurant) {
-      throw new NotFoundError("No restaurant found");
-    }
+    const restaurant: Restaurant = await getRestaurant(restaurant_id)
 
     const menu = restaurant.menu;
     if (!menu) {
