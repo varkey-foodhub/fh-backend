@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS menus (
 -- --------------------
 CREATE TABLE IF NOT EXISTS menu_items_master (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE
+  name TEXT NOT NULL UNIQUE,
+  out_of_stock INTEGER NOT NULL DEFAULT 0 -- ✅ global stock flag
 );
 
 -- --------------------
@@ -49,7 +50,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
 );
 
 -- --------------------
--- menu_item_prices (device-based)
+-- menu_item_prices (device-based pricing only)
 -- --------------------
 CREATE TABLE IF NOT EXISTS menu_item_prices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,16 +82,6 @@ CREATE TABLE IF NOT EXISTS menu_item_ingredients (
   PRIMARY KEY (menu_item_id, ingredient_id)
 );
 
--- --------------------
--- menu_item_oos (out-of-stock per device)
--- --------------------
-CREATE TABLE IF NOT EXISTS menu_item_oos (
-  menu_item_id INTEGER NOT NULL,
-  device TEXT NOT NULL,
-
-  FOREIGN KEY (menu_item_id) REFERENCES menu_items_master(id),
-  PRIMARY KEY (menu_item_id, device)
-);
 `);
 
 console.log("✅ SQLite schema migrated successfully");
