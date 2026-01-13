@@ -18,7 +18,10 @@ export const menuOrm = {
   mim.name AS item_name,
   mim.out_of_stock,
 
-  MIN(mip.price) AS price,
+  json_group_object(
+    UPPER(mip.device),
+    mip.price
+  ) AS price,
 
   (
     SELECT json_group_array(i.name)
@@ -40,18 +43,19 @@ WHERE mi.menu_id = ?
 
 GROUP BY mim.id, mim.name, mim.out_of_stock;
 
+
         `
       )
       .all(menuId) as any[];
 
       const items = rows.map(row => ({
-        id: row.item_id,
         name: row.item_name,
-        price: row.price, // ✅ required by TS
-        out_of_stock: !!row.out_of_stock,
-        out_of_stock_items: JSON.parse(row.out_of_stock_items), // always []
+        price: [JSON.parse(row.price)], // array with single object
         ingredients: JSON.parse(row.ingredients),
+        out_of_stock: !!row.out_of_stock,
+        out_of_stock_items: [],
       }));
+      
       
 
     return {
