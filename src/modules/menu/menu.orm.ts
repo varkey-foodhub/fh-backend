@@ -8,28 +8,26 @@ import { getActiveMenuId } from "../../db/helper";
  */
 export const menuOrm = {
   fetchMenu(restaurant_id: number): Menu {
-    // get active menu (latest version)
     const menuId = getActiveMenuId(restaurant_id);
+
     const rows = db
       .prepare(
         `
         SELECT
   mim.id AS item_id,
   mim.name AS item_name,
+  mim.out_of_stock,
 
-  json_group_array(
-    json_object(
-      'device', mip.device,
-      'price', mip.price
-    )
-  ) AS prices,
+  MIN(mip.price) AS price,
 
   (
     SELECT json_group_array(i.name)
     FROM menu_item_ingredients mii
     JOIN ingredients i ON i.id = mii.ingredient_id
     WHERE mii.menu_item_id = mim.id
-  ) AS ingredients
+  ) AS ingredients,
+
+  json('[]') AS out_of_stock_items
 
 FROM menu_items mi
 JOIN menu_items_master mim
@@ -39,22 +37,23 @@ JOIN menu_item_prices mip
 
 WHERE mi.menu_id = ?
   AND mi.is_active = 1
-  AND mim.id NOT IN (
-    SELECT menu_item_id
-    FROM menu_item_oos
-  )
 
-GROUP BY mim.id, mim.name;
+GROUP BY mim.id, mim.name, mim.out_of_stock;
 
         `
       )
-      .all(menuId);
+      .all(menuId) as any[];
+
       const items = rows.map(row => ({
         id: row.item_id,
         name: row.item_name,
-        prices: JSON.parse(row.prices),
+        price: row.price, // ✅ required by TS
+        out_of_stock: !!row.out_of_stock,
+        out_of_stock_items: JSON.parse(row.out_of_stock_items), // always []
         ingredients: JSON.parse(row.ingredients),
       }));
+      
+
     return {
       id: menuId,
       items,
@@ -63,7 +62,7 @@ GROUP BY mim.id, mim.name;
 
   /**
    * Mark ingredient out of stock
-   * → all menu items using this ingredient become unavailable (per device if needed later)
+   * → all menu items using this ingredient become unavailable
    */
   markIngredientOutOfStock(restaurant_id: number, ingredient: string): Menu {
     const ingredientRow = db
@@ -90,6 +89,7 @@ GROUP BY mim.id, mim.name;
         JOIN menu_item_ingredients mii
           ON mii.menu_item_id = mi.menu_item_id
         WHERE mi.menu_id = ?
+          AND mi.is_active = 1
           AND mii.ingredient_id = ?
         `
       )
@@ -99,16 +99,17 @@ GROUP BY mim.id, mim.name;
       throw ERRORS.INGREDIENT_NOT_FOUND;
     }
 
-    const insertOOS = db.prepare(
+    const updateOOS = db.prepare(
       `
-      INSERT OR IGNORE INTO menu_item_oos (menu_item_id, device)
-      VALUES (?, 'ALL')
+      UPDATE menu_items_master
+      SET out_of_stock = 1
+      WHERE id = ?
       `
     );
 
     const txn = db.transaction(() => {
       for (const item of affectedItems) {
-        insertOOS.run(item.menu_item_id);
+        updateOOS.run(item.menu_item_id);
       }
     });
 
@@ -119,6 +120,7 @@ GROUP BY mim.id, mim.name;
 
   /**
    * Mark ingredient back in stock
+   * → all affected items become available again
    */
   markIngredientBackInStock(restaurant_id: number, ingredient: string): Menu {
     const ingredientRow = db
@@ -140,13 +142,15 @@ GROUP BY mim.id, mim.name;
     const result = db
       .prepare(
         `
-        DELETE FROM menu_item_oos
-        WHERE menu_item_id IN (
-          SELECT mi.menu_item_id
+        UPDATE menu_items_master
+        SET out_of_stock = 0
+        WHERE id IN (
+          SELECT DISTINCT mi.menu_item_id
           FROM menu_items mi
           JOIN menu_item_ingredients mii
             ON mii.menu_item_id = mi.menu_item_id
           WHERE mi.menu_id = ?
+            AND mi.is_active = 1
             AND mii.ingredient_id = ?
         )
         `
