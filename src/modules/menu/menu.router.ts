@@ -7,6 +7,7 @@ import {
   markIngredientBackInStockSchema,
   removeItemParamsSchema,
   updatePriceSchema,
+  updateItemIngredientsSchema
 } from "./menu.schema";
 
 const menuRouter = new Router();
@@ -54,6 +55,13 @@ menuRouter.patch(
     {body: updatePriceSchema}
   ),
   MenuController.updatePrice
+);
+menuRouter.patch(
+  "/update/ingredients",
+  validate(
+    {body: updateItemIngredientsSchema}
+  ),
+  MenuController.updateItemIngredients
 );
 
 export default menuRouter;

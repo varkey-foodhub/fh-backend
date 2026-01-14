@@ -69,7 +69,24 @@ export const MenuController = {
         data,
         message: "Price updated successfully",
       });
-    })
+    }),
+    updateItemIngredients : asyncHandler(async (req:Request, res:Response) => {
+      const {
+        restaurant_id,
+        item_name,
+        ingredients,
+      } = req.body;
     
-  };
+      const data = await MenuService.updateItemIngredients(
+        restaurant_id,
+        item_name,
+        ingredients
+      );
+    
+      return sendResponse(res, {
+        data,
+        message: "Item ingredients updated successfully",
+      });
+    }
+  )};
   

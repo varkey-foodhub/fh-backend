@@ -49,4 +49,17 @@ export const MenuService = {
     sseManager.emitToRestaurant(restaurant_id, EVENTS.MENU_UPDATED, { menu });
     return menu;
   },
+  async updateItemIngredients(
+    restaurant_id: number,
+    item_name: string,
+    ingredients: string[]
+  ): Promise<Menu> {
+    const menu: Menu = await menuRepo.updateItemIngredients(
+      restaurant_id,
+      item_name,
+      ingredients
+    );
+    sseManager.emitToRestaurant(restaurant_id, EVENTS.MENU_UPDATED, { menu });
+    return menu;
+  },
 };

@@ -275,4 +275,85 @@ export const menuOrm = {
     }
     return this.fetchMenu(restaurant_id);
   },
+  updateItemIngredients(
+    restaurant_id: number,
+    item_name: string,
+    ingredients: string[]
+  ) {
+    const menuId = getActiveMenuId(restaurant_id);
+  
+    // 1. Resolve menu item
+    const itemRow = db
+      .prepare(
+        `
+        SELECT mim.id
+        FROM menu_items mi
+        JOIN menu_items_master mim
+          ON mim.id = mi.menu_item_id
+        WHERE mi.menu_id = ?
+          AND mi.is_active = 1
+          AND mim.name = ?
+        `
+      )
+      .get(menuId, item_name) as { id: number } | undefined;
+  
+    if (!itemRow) {
+      throw ERRORS.MENU_ITEM_NOT_FOUND;
+    }
+  
+    const itemId = itemRow.id;
+  
+    const txn = db.transaction(() => {
+      /**
+       * 2. Ensure ingredients exist (upsert)
+       */
+      const insertIngredient = db.prepare(`
+        INSERT OR IGNORE INTO ingredients (name)
+        VALUES (?)
+      `);
+  
+      for (const ing of ingredients) {
+        insertIngredient.run(ing);
+      }
+  
+      /**
+       * 3. Remove stale ingredient mappings
+       */
+      const placeholders = ingredients.map(() => "?").join(",");
+  
+      db.prepare(`
+        DELETE FROM menu_item_ingredients
+        WHERE menu_item_id = ?
+          AND ingredient_id NOT IN (
+            SELECT id FROM ingredients WHERE name IN (${placeholders})
+          )
+      `).run(itemId, ...ingredients);
+  
+      /**
+       * 4. Insert missing mappings
+       */
+      const insertMapping = db.prepare(`
+        INSERT OR IGNORE INTO menu_item_ingredients
+        (menu_item_id, ingredient_id)
+        VALUES (?, ?)
+      `);
+  
+      const ingredientRows = db
+        .prepare(
+          `
+          SELECT id FROM ingredients
+          WHERE name IN (${placeholders})
+          `
+        )
+        .all(...ingredients) as { id: number }[];
+  
+      for (const ing of ingredientRows) {
+        insertMapping.run(itemId, ing.id);
+      }
+    });
+  
+    txn();
+  
+    return this.fetchMenu(restaurant_id);
+  }
 };

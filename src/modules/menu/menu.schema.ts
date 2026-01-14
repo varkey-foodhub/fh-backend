@@ -49,3 +49,15 @@ export const updatePriceSchema = z.object({
     error: "Invalid device provided",
   }),
 })
+
+export const updateItemIngredientsSchema = z.object({
+  restaurant_id: z.coerce.number({
+    error:"Invalid restaurant_id"
+  }),
+  item_name: z.string({
+    error:"Invalid restaurant_id"
+  }),
+  ingredients: z.array(z.string(), {
+    error:"Invalid ingredients array"
+  })
+})
