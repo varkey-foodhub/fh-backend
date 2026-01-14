@@ -14,36 +14,49 @@ export const menuOrm = {
       .prepare(
         `
         SELECT
-  mim.id AS item_id,
-  mim.name AS item_name,
-  mim.out_of_stock,
-
-  json_group_object(
-    UPPER(mip.device),
-    mip.price
-  ) AS price,
-
-  (
-    SELECT json_group_array(i.name)
-    FROM menu_item_ingredients mii
-    JOIN ingredients i ON i.id = mii.ingredient_id
-    WHERE mii.menu_item_id = mim.id
-  ) AS ingredients,
-
-  json('[]') AS out_of_stock_items
-
-FROM menu_items mi
-JOIN menu_items_master mim
-  ON mim.id = mi.menu_item_id
-JOIN menu_item_prices mip
-  ON mip.menu_item_id = mim.id
-
-WHERE mi.menu_id = ?
-  AND mi.is_active = 1
-
-GROUP BY mim.id, mim.name, mim.out_of_stock;
-
-
+        mim.id AS item_id,
+        mim.name AS item_name,
+        mim.out_of_stock,
+      
+        json_group_object(
+          UPPER(mip.device),
+          mip.price
+        ) AS price,
+      
+        COALESCE(
+          (
+            SELECT json_group_array(i.name)
+            FROM menu_item_ingredients mii
+            JOIN ingredients i ON i.id = mii.ingredient_id
+            WHERE mii.menu_item_id = mim.id
+          ),
+          json('[]')
+        ) AS ingredients,
+      
+        COALESCE(
+          (
+            SELECT json_group_array(i.name)
+            FROM menu_item_out_of_stock_ingredients miosi
+            JOIN ingredients i ON i.id = miosi.ingredient_id
+            WHERE miosi.menu_item_id = mim.id
+          ),
+          json('[]')
+        ) AS out_of_stock_items
+      
+      FROM menu_items mi
+      JOIN menu_items_master mim
+        ON mim.id = mi.menu_item_id
+      JOIN menu_item_prices mip
+        ON mip.menu_item_id = mim.id
+      
+      WHERE mi.menu_id = ?
+        AND mi.is_active = 1
+      
+      GROUP BY
+        mim.id,
+        mim.name,
+        mim.out_of_stock;
+      
         `
       )
       .all(menuId) as any[];
@@ -53,7 +66,9 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
       price: [JSON.parse(row.price)], // array with single object
       ingredients: JSON.parse(row.ingredients),
       out_of_stock: !!row.out_of_stock,
-      out_of_stock_items: [],
+      out_of_stock_items: row.out_of_stock_items
+        ? JSON.parse(row.out_of_stock_items)
+        : [],
     }));
 
     return {
@@ -100,7 +115,11 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
     if (affectedItems.length === 0) {
       throw ERRORS.INGREDIENT_NOT_FOUND;
     }
-
+    const insertOOS = db.prepare(`
+  INSERT OR IGNORE INTO menu_item_out_of_stock_ingredients
+  (menu_item_id, ingredient_id)
+  VALUES (?, ?)
+`);
     const updateOOS = db.prepare(
       `
       UPDATE menu_items_master
@@ -112,6 +131,7 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
     const txn = db.transaction(() => {
       for (const item of affectedItems) {
         updateOOS.run(item.menu_item_id);
+        insertOOS.run(item.menu_item_id, ingredientRow.id);
       }
     });
 
@@ -140,6 +160,19 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
     }
 
     const menuId = getActiveMenuId(restaurant_id);
+    const removeIngredientFromOOS = db.prepare(`
+  DELETE FROM menu_item_out_of_stock_ingredients
+  WHERE ingredient_id = ?
+    AND menu_item_id IN (
+      SELECT DISTINCT mi.menu_item_id
+      FROM menu_items mi
+      JOIN menu_item_ingredients mii
+        ON mii.menu_item_id = mi.menu_item_id
+      WHERE mi.menu_id = ?
+        AND mi.is_active = 1
+        AND mii.ingredient_id = ?
+    )
+`);
 
     const result = db
       .prepare(
@@ -159,10 +192,18 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
       )
       .run(menuId, ingredientRow.id);
 
+
+
     if (result.changes === 0) {
       throw ERRORS.INGREDIENT_NOT_FOUND;
     }
 
+    const txn = db.transaction(() => {
+      removeIngredientFromOOS.run(ingredientRow.id, menuId, ingredientRow.id);
+    });
+    
+    txn();
+    
     return this.fetchMenu(restaurant_id);
   },
 

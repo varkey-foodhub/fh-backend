@@ -82,6 +82,16 @@ CREATE TABLE IF NOT EXISTS menu_item_ingredients (
   PRIMARY KEY (menu_item_id, ingredient_id)
 );
 
+CREATE TABLE IF NOT EXISTS menu_item_out_of_stock_ingredients (
+  menu_item_id INTEGER NOT NULL,
+  ingredient_id INTEGER NOT NULL,
+
+  FOREIGN KEY (menu_item_id) REFERENCES menu_items_master(id) ON DELETE CASCADE,
+  FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE,
+
+  PRIMARY KEY (menu_item_id, ingredient_id)
+);
+
 `);
 
 console.log("✅ SQLite schema migrated successfully");
