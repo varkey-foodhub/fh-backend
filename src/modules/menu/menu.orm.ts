@@ -146,41 +146,20 @@ export const menuOrm = {
    */
   markIngredientBackInStock(restaurant_id: number, ingredient: string): Menu {
     const ingredientRow = db
-      .prepare(
-        `
-        SELECT id
-        FROM ingredients
-        WHERE name = ?
-        `
-      )
+      .prepare(`SELECT id FROM ingredients WHERE name = ?`)
       .get(ingredient) as { id: number } | undefined;
-
+  
     if (!ingredientRow) {
       throw ERRORS.INGREDIENT_NOT_FOUND;
     }
-
+  
     const menuId = getActiveMenuId(restaurant_id);
+  
     const removeIngredientFromOOS = db.prepare(`
-  DELETE FROM menu_item_out_of_stock_ingredients
-  WHERE ingredient_id = ?
-    AND menu_item_id IN (
-      SELECT DISTINCT mi.menu_item_id
-      FROM menu_items mi
-      JOIN menu_item_ingredients mii
-        ON mii.menu_item_id = mi.menu_item_id
-      WHERE mi.menu_id = ?
-        AND mi.is_active = 1
-        AND mii.ingredient_id = ?
-    )
-`);
-
-    const result = db
-      .prepare(
-        `
-        UPDATE menu_items_master
-        SET out_of_stock = 0
-        WHERE id IN (
-          SELECT DISTINCT mi.menu_item_id
+      DELETE FROM menu_item_out_of_stock_ingredients
+      WHERE ingredient_id = ?
+        AND menu_item_id IN (
+          SELECT mi.menu_item_id
           FROM menu_items mi
           JOIN menu_item_ingredients mii
             ON mii.menu_item_id = mi.menu_item_id
@@ -188,24 +167,42 @@ export const menuOrm = {
             AND mi.is_active = 1
             AND mii.ingredient_id = ?
         )
-        `
+    `);
+  
+    const markItemsBackInStock = db.prepare(`
+      UPDATE menu_items_master
+      SET out_of_stock = 0
+      WHERE id IN (
+        SELECT mim.id
+        FROM menu_items_master mim
+        JOIN menu_items mi
+          ON mi.menu_item_id = mim.id
+        LEFT JOIN menu_item_out_of_stock_ingredients miosi
+          ON miosi.menu_item_id = mim.id
+        WHERE mi.menu_id = ?
+          AND mi.is_active = 1
+        GROUP BY mim.id
+        HAVING COUNT(miosi.ingredient_id) = 0
       )
-      .run(menuId, ingredientRow.id);
-
-
-
-    if (result.changes === 0) {
-      throw ERRORS.INGREDIENT_NOT_FOUND;
-    }
-
+    `);
+  
     const txn = db.transaction(() => {
-      removeIngredientFromOOS.run(ingredientRow.id, menuId, ingredientRow.id);
+      // 1. Remove ingredient from OOS mapping
+      removeIngredientFromOOS.run(
+        ingredientRow.id,
+        menuId,
+        ingredientRow.id
+      );
+  
+      // 2. Only restore items with ZERO remaining OOS ingredients
+      markItemsBackInStock.run(menuId);
     });
-    
+  
     txn();
-    
+  
     return this.fetchMenu(restaurant_id);
   },
+  
 
   /**
    * Remove item from menu (soft delete)
