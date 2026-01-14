@@ -49,5 +49,27 @@ export const MenuController = {
         message: "Item removed from menu",
       });
     }),
+
+    updatePrice: asyncHandler(async (req: Request, res: Response) => {
+      const {
+        restaurant_id,
+        item_name,
+        price,
+        device,
+      } = req.body;
+    
+      const data = await MenuService.updatePrice(
+        restaurant_id,
+        item_name,
+        device,
+        price
+      );
+    
+      return sendResponse(res, {
+        data,
+        message: "Price updated successfully",
+      });
+    })
+    
   };
   

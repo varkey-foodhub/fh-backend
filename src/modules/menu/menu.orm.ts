@@ -48,15 +48,13 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
       )
       .all(menuId) as any[];
 
-      const items = rows.map(row => ({
-        name: row.item_name,
-        price: [JSON.parse(row.price)], // array with single object
-        ingredients: JSON.parse(row.ingredients),
-        out_of_stock: !!row.out_of_stock,
-        out_of_stock_items: [],
-      }));
-      
-      
+    const items = rows.map((row) => ({
+      name: row.item_name,
+      price: [JSON.parse(row.price)], // array with single object
+      ingredients: JSON.parse(row.ingredients),
+      out_of_stock: !!row.out_of_stock,
+      out_of_stock_items: [],
+    }));
 
     return {
       id: menuId,
@@ -193,6 +191,50 @@ GROUP BY mim.id, mim.name, mim.out_of_stock;
       throw ERRORS.MENU_ITEM_NOT_FOUND;
     }
 
+    return this.fetchMenu(restaurant_id);
+  },
+  /**
+   * Update price for a specific device for a menu item
+   */
+  updateItemPrice(
+    restaurant_id: number,
+    item_name: string,
+    device: string,
+    price: number
+  ): Menu {
+    const menuId = getActiveMenuId(restaurant_id);
+    // Ensure item exists in active menu
+    const itemRow = db
+      .prepare(
+        `
+      SELECT mim.id
+      FROM menu_items mi
+      JOIN menu_items_master mim
+        ON mim.id = mi.menu_item_id
+      WHERE mi.menu_id = ?
+        AND mi.is_active = 1
+        AND mim.name = ?
+      `
+      )
+      .get(menuId, item_name) as { id: number } | undefined;
+
+    if (!itemRow) {
+      throw ERRORS.MENU_ITEM_NOT_FOUND;
+    }
+
+    const result = db
+      .prepare(
+        `
+      UPDATE menu_item_prices
+      SET price = ?
+      WHERE menu_item_id = ?
+        AND UPPER(device) = UPPER(?)
+      `
+      )
+      .run(price, itemRow.id, device);
+    if (result.changes === 0) {
+      throw ERRORS.INVALID_DEVICE;
+    }
     return this.fetchMenu(restaurant_id);
   },
 };

@@ -1,5 +1,5 @@
 import { menuOrm } from "./menu.orm";
-import { Menu } from "./menu.types";
+import { Device, Menu } from "./menu.types";
 export const menuRepo = {
     
     async fetchMenu(restaurant_id:number): Promise<Menu>{
@@ -13,5 +13,11 @@ export const menuRepo = {
     },
     async removeItem(restaurant_id:number, item_name:string):Promise<Menu>{
         return menuOrm.removeItem(restaurant_id,item_name);
+    },
+    async updateItemPrice( restaurant_id: number,
+        item_name: string,
+        device: string,
+        price: number):Promise<Menu>{
+        return menuOrm.updateItemPrice(restaurant_id,item_name,device,price)
     }
 }

@@ -1,9 +1,13 @@
-import {Router} from 'express'
-import { MenuController } from './menu.controller'
-import { validate } from '../../middlewares/zod.middleware'
-import { menuParamsSchema, markIngredientOutOfStockSchema, markIngredientBackInStockSchema,removeItemParamsSchema} from './menu.schema'
-
-
+import { Router } from "express";
+import { MenuController } from "./menu.controller";
+import { validate } from "../../middlewares/zod.middleware";
+import {
+  menuParamsSchema,
+  markIngredientOutOfStockSchema,
+  markIngredientBackInStockSchema,
+  removeItemParamsSchema,
+  updatePriceSchema,
+} from "./menu.schema";
 
 const menuRouter = new Router();
 
@@ -28,18 +32,28 @@ menuRouter.post(
   }),
   MenuController.removeItem
 );
-menuRouter.post('/add/ingredient/:restaurant_id/:ingredient',
-    validate({
-        params:markIngredientBackInStockSchema
-    }),
-    MenuController.markIngredientBackInStock
-)
+menuRouter.post(
+  "/add/ingredient/:restaurant_id/:ingredient",
+  validate({
+    params: markIngredientBackInStockSchema,
+  }),
+  MenuController.markIngredientBackInStock
+);
 
-menuRouter.post('/add/ingredient/:restaurant_id/:ingredient',
-    validate({
-        params:markIngredientBackInStockSchema
-    }),
-    MenuController.markIngredientBackInStock
-)
+menuRouter.post(
+  "/add/ingredient/:restaurant_id/:ingredient",
+  validate({
+    params: markIngredientBackInStockSchema,
+  }),
+  MenuController.markIngredientBackInStock
+);
 
-export default menuRouter
+menuRouter.patch(
+  "/update/price",
+  validate(
+    {body: updatePriceSchema}
+  ),
+  MenuController.updatePrice
+);
+
+export default menuRouter;
