@@ -6,68 +6,76 @@ import { RowDataPacket, ResultSetHeader } from "mysql2";
 
 export const menuOrm = {
   /**
-   * Fetch active menu for a restaurant (MySQL version)
+   * Fetch active menu
    */
   async fetchMenu(restaurant_id: number): Promise<Menu> {
-    // FIX: Added await here
     const menuId = await getActiveMenuId(restaurant_id);
 
     const [rows] = await db.query<RowDataPacket[]>(
       `
       SELECT
-        mim.id AS item_id,
-        mim.name AS item_name,
-        mim.out_of_stock,
-
-        JSON_OBJECTAGG(
-          UPPER(mip.device),
-          mip.price
-        ) AS price,
-
-        COALESCE(
-          (
-            SELECT JSON_ARRAYAGG(i.name)
-            FROM menu_item_ingredients mii
-            JOIN ingredients i ON i.id = mii.ingredient_id
-            WHERE mii.menu_item_id = mim.id
-          ),
-          JSON_ARRAY()
-        ) AS ingredients,
-
-        COALESCE(
-          (
-            SELECT JSON_ARRAYAGG(i.name)
-            FROM menu_item_out_of_stock_ingredients miosi
-            JOIN ingredients i ON i.id = miosi.ingredient_id
-            WHERE miosi.menu_item_id = mim.id
-          ),
-          JSON_ARRAY()
-        ) AS out_of_stock_items
-
-      FROM menu_items mi
-      JOIN menu_items_master mim ON mim.id = mi.menu_item_id
-      JOIN menu_item_prices mip ON mip.menu_item_id = mim.id
-
-      WHERE mi.menu_id = ?
-        AND mi.is_active = 1
-
-      GROUP BY mim.id, mim.name, mim.out_of_stock
+      mi.name AS item_name,
+    
+      JSON_OBJECTAGG(
+        d.device_type,
+        mi.price
+      ) AS price,
+    
+      COALESCE(
+        (
+          SELECT JSON_ARRAYAGG(t.name)
+          FROM (
+            SELECT DISTINCT i.name
+            FROM menu_item_ingredients mii2
+            JOIN ingredients i
+              ON i.id = mii2.ingredient_id
+            WHERE mii2.menu_item_id = MIN(mi.id)
+          ) t
+        ),
+        JSON_ARRAY()
+      ) AS ingredients,
+    
+      COALESCE(
+        (
+          SELECT JSON_ARRAYAGG(t2.name)
+          FROM (
+            SELECT DISTINCT i2.name
+            FROM menu_item_ingredients mii3
+            JOIN ingredients i2
+              ON i2.id = mii3.ingredient_id
+            WHERE mii3.menu_item_id = MIN(mi.id)
+              AND mii3.out_of_stock = 1
+          ) t2
+        ),
+        JSON_ARRAY()
+      ) AS out_of_stock_items,
+    
+      MAX(mi.out_of_stock) AS out_of_stock
+    
+    FROM menu_items mi
+    JOIN devices d
+      ON d.id = mi.device_id
+    
+    WHERE mi.menu_id = ?
+      AND mi.is_active = 1
+    
+    GROUP BY mi.name;
+    
       `,
       [menuId]
     );
 
-    // Helper to safely parse JSON if MySQL returns it as a string
-    const parseJson = (val: any) => (typeof val === 'string' ? JSON.parse(val) : val);
+    const parse = (v: any) => (typeof v === "string" ? JSON.parse(v) : v);
 
-    const items = rows.map((row) => ({
-      name: row.item_name,
-      price: [parseJson(row.price)],
-      ingredients: parseJson(row.ingredients) ?? [],
-      out_of_stock: !!row.out_of_stock,
-      out_of_stock_items: parseJson(row.out_of_stock_items) ?? [],
-    }));
-
-    return { items };
+    return {
+      items: rows.map((r) => ({
+        name: r.item_name,
+        price: [parse(r.price)],
+        ingredients: parse(r.ingredients) ?? [],
+        out_of_stock: !!r.out_of_stock,
+        out_of_stock_items: parse(r.out_of_stock_items) ?? [],
+      })),
+    };
   },
 
   /**
@@ -77,59 +85,52 @@ export const menuOrm = {
     restaurant_id: number,
     ingredient: string
   ): Promise<Menu> {
-    const [rows] = await db.query<RowDataPacket[]>(
+    const menuId = await getActiveMenuId(restaurant_id);
+
+    const [ingRows] = await db.query<RowDataPacket[]>(
       `SELECT id FROM ingredients WHERE name = ?`,
       [ingredient]
     );
 
-    const ingredientRow = rows[0] as { id: number } | undefined;
+    if (!ingRows[0]) throw ERRORS.INGREDIENT_NOT_FOUND;
 
-    if (!ingredientRow) throw ERRORS.INGREDIENT_NOT_FOUND;
-
-    // FIX: Added await here
-    const menuId = await getActiveMenuId(restaurant_id);
-
-    const [affectedItems] = await db.query<RowDataPacket[]>(
-      `
-      SELECT DISTINCT mi.menu_item_id
-      FROM menu_items mi
-      JOIN menu_item_ingredients mii
-        ON mii.menu_item_id = mi.menu_item_id
-      WHERE mi.menu_id = ?
-        AND mi.is_active = 1
-        AND mii.ingredient_id = ?
-      `,
-      [menuId, ingredientRow.id]
-    );
-
-    if (affectedItems.length === 0) {
-      throw ERRORS.INGREDIENT_NOT_FOUND;
-    }
+    const ingredientId = ingRows[0].id;
 
     const conn = await db.getConnection();
     await conn.beginTransaction();
 
     try {
-      for (const item of affectedItems) {
-        await conn.execute(
-          `UPDATE menu_items_master SET out_of_stock = 1 WHERE id = ?`,
-          [item.menu_item_id]
-        );
+      await conn.execute(
+        `
+        UPDATE menu_item_ingredients
+        SET out_of_stock = 1
+        WHERE ingredient_id = ?
+          AND menu_item_id IN (
+            SELECT id FROM menu_items
+            WHERE menu_id = ?
+              AND is_active = 1
+          )
+        `,
+        [ingredientId, menuId]
+      );
 
-        await conn.execute(
-          `
-          INSERT IGNORE INTO menu_item_out_of_stock_ingredients
-          (menu_item_id, ingredient_id)
-          VALUES (?, ?)
-          `,
-          [item.menu_item_id, ingredientRow.id]
-        );
-      }
+      await conn.execute(
+        `
+        UPDATE menu_items
+        SET out_of_stock = 1
+        WHERE id IN (
+          SELECT DISTINCT menu_item_id
+          FROM menu_item_ingredients
+          WHERE ingredient_id = ?
+        )
+        `,
+        [ingredientId]
+      );
 
       await conn.commit();
-    } catch (err) {
+    } catch (e) {
       await conn.rollback();
-      throw err;
+      throw e;
     } finally {
       conn.release();
     }
@@ -144,17 +145,16 @@ export const menuOrm = {
     restaurant_id: number,
     ingredient: string
   ): Promise<Menu> {
-    const [rows] = await db.query<RowDataPacket[]>(
+    const menuId = await getActiveMenuId(restaurant_id);
+
+    const [ingRows] = await db.query<RowDataPacket[]>(
       `SELECT id FROM ingredients WHERE name = ?`,
       [ingredient]
     );
 
-    const ingredientRow = rows[0] as { id: number } | undefined;
+    if (!ingRows[0]) throw ERRORS.INGREDIENT_NOT_FOUND;
 
-    if (!ingredientRow) throw ERRORS.INGREDIENT_NOT_FOUND;
-
-    // FIX: Added await here
-    const menuId = await getActiveMenuId(restaurant_id);
+    const ingredientId = ingRows[0].id;
 
     const conn = await db.getConnection();
     await conn.beginTransaction();
@@ -162,35 +162,35 @@ export const menuOrm = {
     try {
       await conn.execute(
         `
-        DELETE FROM menu_item_out_of_stock_ingredients
+        UPDATE menu_item_ingredients
+        SET out_of_stock = 0
         WHERE ingredient_id = ?
           AND menu_item_id IN (
-            SELECT mi.menu_item_id
-            FROM menu_items mi
-            JOIN menu_item_ingredients mii
-              ON mii.menu_item_id = mi.menu_item_id
-            WHERE mi.menu_id = ?
-              AND mi.is_active = 1
-              AND mii.ingredient_id = ?
+            SELECT id FROM menu_items
+            WHERE menu_id = ?
+              AND is_active = 1
           )
         `,
-        [ingredientRow.id, menuId, ingredientRow.id]
+        [ingredientId, menuId]
       );
 
       await conn.execute(
         `
-        UPDATE menu_items_master mim
-        LEFT JOIN menu_item_out_of_stock_ingredients miosi
-          ON miosi.menu_item_id = mim.id
-        SET mim.out_of_stock = 0
-        WHERE miosi.menu_item_id IS NULL
-        `
+        UPDATE menu_items mi
+        LEFT JOIN menu_item_ingredients mii
+          ON mi.id = mii.menu_item_id
+          AND mii.out_of_stock = 1
+        SET mi.out_of_stock = 0
+        WHERE mi.menu_id = ?
+          AND mii.menu_item_id IS NULL
+        `,
+        [menuId]
       );
 
       await conn.commit();
-    } catch (err) {
+    } catch (e) {
       await conn.rollback();
-      throw err;
+      throw e;
     } finally {
       conn.release();
     }
@@ -205,22 +205,19 @@ export const menuOrm = {
     restaurant_id: number,
     item_name: string
   ): Promise<Menu> {
-    // FIX: Added await here
     const menuId = await getActiveMenuId(restaurant_id);
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [res] = await db.execute<ResultSetHeader>(
       `
       UPDATE menu_items
       SET is_active = 0
       WHERE menu_id = ?
-        AND menu_item_id = (
-          SELECT id FROM menu_items_master WHERE name = ?
-        )
+        AND name = ?
       `,
       [menuId, item_name]
     );
 
-    if (result.affectedRows === 0) {
+    if (res.affectedRows === 0) {
       throw ERRORS.MENU_ITEM_NOT_FOUND;
     }
 
@@ -228,7 +225,7 @@ export const menuOrm = {
   },
 
   /**
-   * Update item price
+   * Update item price (device-specific)
    */
   async updateItemPrice(
     restaurant_id: number,
@@ -236,36 +233,23 @@ export const menuOrm = {
     device: string,
     price: number
   ): Promise<Menu> {
-    // FIX: Added await here
     const menuId = await getActiveMenuId(restaurant_id);
 
-    const [rows] = await db.query<RowDataPacket[]>(
+    const [res] = await db.execute<ResultSetHeader>(
       `
-      SELECT mim.id
-      FROM menu_items mi
-      JOIN menu_items_master mim ON mim.id = mi.menu_item_id
+      UPDATE menu_items mi
+      JOIN devices d
+        ON d.id = mi.device_id
+      SET mi.price = ?
       WHERE mi.menu_id = ?
+        AND mi.name = ?
+        AND UPPER(d.device_type) = UPPER(?)
         AND mi.is_active = 1
-        AND mim.name = ?
       `,
-      [menuId, item_name]
+      [price, menuId, item_name, device]
     );
 
-    const itemRow = rows[0] as { id: number } | undefined;
-
-    if (!itemRow) throw ERRORS.MENU_ITEM_NOT_FOUND;
-
-    const [result] = await db.execute<ResultSetHeader>(
-      `
-      UPDATE menu_item_prices
-      SET price = ?
-      WHERE menu_item_id = ?
-        AND UPPER(device) = UPPER(?)
-      `,
-      [price, itemRow.id, device]
-    );
-
-    if (result.affectedRows === 0) {
+    if (res.affectedRows === 0) {
       throw ERRORS.INVALID_DEVICE;
     }
 
@@ -280,24 +264,7 @@ export const menuOrm = {
     item_name: string,
     ingredients: string[]
   ): Promise<Menu> {
-    // FIX: Added await here
     const menuId = await getActiveMenuId(restaurant_id);
-    
-    const [rows] = await db.query<RowDataPacket[]>(
-      `
-      SELECT mim.id
-      FROM menu_items mi
-      JOIN menu_items_master mim ON mim.id = mi.menu_item_id
-      WHERE mi.menu_id = ?
-        AND mi.is_active = 1
-        AND mim.name = ?
-      `,
-      [menuId, item_name]
-    );
-
-    const itemRow = rows[0] as { id: number } | undefined;
-
-    if (!itemRow) throw ERRORS.MENU_ITEM_NOT_FOUND;
 
     const conn = await db.getConnection();
     await conn.beginTransaction();
@@ -313,43 +280,49 @@ export const menuOrm = {
       if (ingredients.length > 0) {
         await conn.query(
           `
-          DELETE FROM menu_item_ingredients
-          WHERE menu_item_id = ?
-            AND ingredient_id NOT IN (
+          DELETE mii
+          FROM menu_item_ingredients mii
+          JOIN menu_items mi ON mi.id = mii.menu_item_id
+          WHERE mi.menu_id = ?
+            AND mi.name = ?
+            AND mii.ingredient_id NOT IN (
               SELECT id FROM ingredients WHERE name IN (?)
             )
           `,
-          [itemRow.id, ingredients]
+          [menuId, item_name, ingredients]
+        );
+
+        await conn.query(
+          `
+          INSERT IGNORE INTO menu_item_ingredients
+            (menu_item_id, ingredient_id, out_of_stock)
+          SELECT mi.id, i.id, 0
+          FROM menu_items mi
+          JOIN ingredients i
+            ON i.name IN (?)
+          WHERE mi.menu_id = ?
+            AND mi.name = ?
+            AND mi.is_active = 1
+          `,
+          [ingredients, menuId, item_name]
         );
       } else {
-        await conn.execute(
-            `DELETE FROM menu_item_ingredients WHERE menu_item_id = ?`,
-            [itemRow.id]
+        await conn.query(
+          `
+          DELETE mii
+          FROM menu_item_ingredients mii
+          JOIN menu_items mi ON mi.id = mii.menu_item_id
+          WHERE mi.menu_id = ?
+            AND mi.name = ?
+          `,
+          [menuId, item_name]
         );
-      }
-
-      if (ingredients.length > 0) {
-        const [ingredientRows] = await conn.query<RowDataPacket[]>(
-          `SELECT id FROM ingredients WHERE name IN (?)`,
-          [ingredients]
-        );
-
-        for (const ing of ingredientRows) {
-          await conn.execute(
-            `
-            INSERT IGNORE INTO menu_item_ingredients
-            (menu_item_id, ingredient_id)
-            VALUES (?, ?)
-            `,
-            [itemRow.id, ing.id]
-          );
-        }
       }
 
       await conn.commit();
-    } catch (err) {
+    } catch (e) {
       await conn.rollback();
-      throw err;
+      throw e;
     } finally {
       conn.release();
     }
