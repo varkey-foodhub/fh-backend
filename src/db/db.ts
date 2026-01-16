@@ -1,7 +1,15 @@
-import Database from "better-sqlite3";
+import mysql from "mysql2/promise";
+import dotenv from 'dotenv'
+dotenv.config();
+const db = mysql.createPool({
+  host: process.env.MYSQL_URL,
+  user: process.env.MYSQL_USER_NAME,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DB,
 
-export const db = new Database("app.db");
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
-db.pragma("journal_mode = WAL");
-
-export default db
+export default db;
