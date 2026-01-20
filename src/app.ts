@@ -1,5 +1,5 @@
 import express from 'express'
-import type {Reqest,Response} from 'express'
+import type {Request,Response} from 'express'
 import { errorMiddleware } from './middlewares/error.middleware'
 import menuRouter from './modules/menu/menu.router'
 import restaurantRouter from './modules/restaurant/restaurant.route'
@@ -8,15 +8,11 @@ const app = express()
 
 app.use(express.json())
 app.use(
-    cors({
-      origin: "*",
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    })
+    cors()
   );
   
 
-app.get('/health',(_req:Reqest,res:Response)=>{
+app.get('/health',(_req:Request,res:Response)=>{
     res.json({
         status:200,
         message:"alive"
