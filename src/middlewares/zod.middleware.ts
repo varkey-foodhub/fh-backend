@@ -1,6 +1,6 @@
 import { ZodObject, ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
-import { ValidationError } from "../errors";
+import { ERRORS } from "../errors";
 
 type ZodSchemas = {
   body?: ZodObject;
@@ -27,7 +27,7 @@ export const validate =
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        throw new ValidationError(err.message)
+        throw  ERRORS.VALIDATION_ERROR
       }
       next(err);
     }

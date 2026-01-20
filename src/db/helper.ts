@@ -1,23 +1,15 @@
 import db from "./db";
-import { ERRORS } from "../errors";
+import { RowDataPacket } from "mysql2";
 
-export function getActiveMenuId(restaurant_id: number): number {
-  const menu = db
-    .prepare(
-      `
-      SELECT id
-      FROM menus
-      WHERE restaurant_id = ?
-        AND is_active = 1
-      ORDER BY version DESC
-      LIMIT 1
-      `
-    )
-    .get(restaurant_id) as { id: number } | undefined;
+export async function getActiveMenuId(restaurant_id: number): Promise<number> {
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT id FROM menus WHERE restaurant_id = ? AND is_active = 1 LIMIT 1`,
+    [restaurant_id]
+  );
 
-  if (!menu) {
-    throw ERRORS.MENU_NOT_FOUND;
+  if (!rows || rows.length === 0) {
+    throw new Error(`No active menu found for restaurant ID: ${restaurant_id}`);
   }
 
-  return menu.id;
+  return rows[0].id;
 }
