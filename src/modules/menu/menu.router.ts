@@ -10,7 +10,7 @@ import {
   updateItemIngredientsSchema
 } from "./menu.schema";
 
-const menuRouter = new Router();
+const menuRouter =  Router();
 
 menuRouter.get(
   "/:restaurant_id",

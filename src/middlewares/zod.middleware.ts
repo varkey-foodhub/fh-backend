@@ -17,11 +17,11 @@ export const validate =
       }
 
       if (schemas.params) {
-        req.params = schemas.params.parse(req.params);
+        req.params = schemas.params.parse(req.params) as any
       }
 
       if (schemas.query) {
-        req.query = schemas.query.parse(req.query);
+        req.query = schemas.query.parse(req.query) as any
       }
 
       next();
